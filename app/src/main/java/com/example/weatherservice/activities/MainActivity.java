@@ -1,0 +1,124 @@
+package com.example.weatherservice.activities;
+
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+
+import com.example.weatherservice.operations.WeatherOperations;
+import com.example.weatherservice.operations.WeatherOperationsImpl;
+import com.example.weatherservice.utils.RetainedFragmentManager;
+
+
+public class MainActivity extends LifecycleLoggingActivity {
+    public static final String WEATHER_OPS_STATE = "WEATHER_OPS_STATE";
+    /**
+     * Used to retain the WeatherOperations state between runtime configuration
+     * changes.
+     */
+    protected final RetainedFragmentManager mRetainedFragmentManager = new RetainedFragmentManager(this.getFragmentManager(), TAG);
+
+    /**
+     * Provides acronym-related operations.
+     */
+    private WeatherOperations mWeatherOps;
+
+    /**
+     * Hook method called when a new instance of Activity is created.
+     * One time initialization code goes here, e.g., runtime
+     * configuration changes.
+     *
+     * @param savedInstanceState object that contains saved state information.
+     */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        // Always call super class for necessary
+        // initialization/implementation.
+        super.onCreate(savedInstanceState);
+
+        // Create the AcronymOps object one time.
+        mWeatherOps = new WeatherOperationsImpl(this);
+
+        // Handle any configuration change.
+        handleConfigurationChanges();
+    }
+
+    /**
+     * Hook method called by Android when this Activity is
+     * destroyed.
+     */
+    @Override
+    protected void onDestroy() {
+        // Unbind from the Service.
+        mWeatherOps.unbindService();
+
+        // Always call super class for necessary operations when an
+        // Activity is destroyed.
+        super.onDestroy();
+    }
+
+    /**
+     * Handle hardware reconfigurations, such as rotating the display.
+     */
+    protected void handleConfigurationChanges() {
+        // If this method returns true then this is the first time the
+        // Activity has been created.
+        if (mRetainedFragmentManager.firstTimeIn()) {
+            Log.d(TAG, "First time onCreate() call");
+
+            // Create the AcronymOps object one time.  The "true"
+            // parameter instructs AcronymOps to use the
+            // DownloadImagesBoundService.
+            mWeatherOps = new WeatherOperationsImpl(this);
+
+            // Store the AcronymOps into the RetainedFragmentManager.
+            mRetainedFragmentManager.put(WEATHER_OPS_STATE, mWeatherOps);
+
+            // Initiate the service binding protocol (which may be a
+            // no-op, depending on which type of DownloadImages*Service is
+            // used).
+            mWeatherOps.bindService();
+        } else {
+            // The RetainedFragmentManager was previously initialized,
+            // which means that a runtime configuration change
+            // occured.
+
+            Log.d(TAG, "Second or subsequent onCreate() call");
+
+            // Obtain the AcronymOps object from the RetainedFragmentManager.
+            mWeatherOps = mRetainedFragmentManager.get(WEATHER_OPS_STATE);
+
+            // This check shouldn't be necessary under normal
+            // circumstances, but it's better to lose state than to
+            // crash!
+            if (mWeatherOps == null) {
+                // Create the AcronymOps object one time.  The "true"
+                // parameter instructs AcronymOps to use the
+                // DownloadImagesBoundService.
+                mWeatherOps = new WeatherOperationsImpl(this);
+
+                // Store the AcronymOps into the RetainedFragmentManager.
+                mRetainedFragmentManager.put(WEATHER_OPS_STATE, mWeatherOps);
+
+                // Initiate the service binding protocol (which may be
+                // a no-op, depending on which type of
+                // DownloadImages*Service is used).
+                mWeatherOps.bindService();
+            } else
+                // Inform it that the runtime configuration change has
+                // completed.
+                mWeatherOps.onConfigurationChange(this);
+        }
+    }
+
+    public void getWeatherSync(View v) {
+        mWeatherOps.getWeatherSync(v);
+    }
+
+    public void getWeatherAsync(View v) {
+        mWeatherOps.getWeatherAsync(v);
+    }
+}
+
+
+
+
